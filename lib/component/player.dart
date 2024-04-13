@@ -1,40 +1,43 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
-import 'package:object_detection/db/db_helper.dart';
+import 'package:object_detection/component/player_widget.dart';
+import 'package:object_detection/data/audio_data.dart';
+import 'package:path/path.dart';
 
-class Player extends StatelessWidget {
-  const Player({super.key});
+class Player extends StatefulWidget {
+  const Player({super.key, required this.file});
 
-  // This widget is the root of your application.
+  final AudioData file;
+
+  @override
+  State<Player> createState() => _PlayerState();
+}
+
+class _PlayerState extends State<Player> {
+  late AudioPlayer player = AudioPlayer();
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: const PlayerPage(title: 'Flutter Demo Home Page'),
+    return Center(
+      child: PlayerWidget(player: player),
     );
   }
-}
-
-class PlayerPage extends StatefulWidget {
-  const PlayerPage({super.key, required this.title});
-
-  final String title;
 
   @override
-  State<PlayerPage> createState() => _PlayerPageState();
-}
-
-class _PlayerPageState extends State<PlayerPage> {
-  bool isEmpty = true;
-  List<String> fileList = [];
-  final DBHelper _dbHelper = DBHelper();
+  void initState() {
+    super.initState();
+    player = AudioPlayer();
+    player.setReleaseMode(ReleaseMode.stop);
+    player.setPlayerMode(PlayerMode.mediaPlayer);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await player.setSource(DeviceFileSource(widget.file.path));
+      await player.resume();
+    });
+  }
 
   @override
-  Widget build(BuildContext context) {
-    return Text('');
+  void dispose() {
+    player.dispose();
+    super.dispose();
   }
 
 }

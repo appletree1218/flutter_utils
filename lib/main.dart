@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:object_detection/component/autio.dart';
+import 'package:path_provider/path_provider.dart';
 
-void main() {
+void main()async {
   runApp(const MyApp());
 }
 

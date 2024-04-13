@@ -1,5 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:object_detection/component/player.dart';
 import 'package:object_detection/data/audio_data.dart';
 import 'package:object_detection/db/db_helper.dart';
 
@@ -33,16 +34,21 @@ class _AudioPageState extends State<AudioPage> {
   bool isEmpty = true;
   List<AudioData> fileList = [];
   final DBHelper _dbHelper = DBHelper();
-  TextEditingController _searchController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
 
   Future<void> _openFileExplorer(BuildContext buildContext)async {
-    final result = await FilePicker.platform.pickFiles(allowMultiple: false);
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      type: FileType.audio
+    );
     if (result != null) {
-        String filePath = result.files.single.path!;
-        // Do something with the selected file path
-        String fileName = result.files.single.name;
-        AudioData audioData = AudioData(fileName: fileName, path: filePath);
-        _dbHelper.insertData(audioData);
+        List<PlatformFile> files = result.files;
+        for (PlatformFile f in files){
+          AudioData audioData = AudioData(fileName: f.name, path: f.path.toString());
+          _dbHelper.insertData(audioData);
+        }
+
+        _syncDb();
     }
   }
 
@@ -104,37 +110,52 @@ class _AudioPageState extends State<AudioPage> {
               ),
             ),
           ),
-          body:ListView.builder(
-                itemCount: fileList.length,
-                itemBuilder: (BuildContext context, int index){
-                  AudioData item = fileList[index];
-                  return Dismissible(
-                    key: Key(index.toString()),
-                    background: Container(
-                      color: Colors.red,
-                      child: const Align(
-                        alignment: Alignment.centerLeft,
-                        child: Padding(
-                          padding: EdgeInsets.only(left: 20.0),
-                          child: Icon(Icons.delete, color: Colors.white),
-                        ),
+          body: RefreshIndicator(
+            onRefresh: _syncDb,
+            child: ListView.builder(
+              itemCount: fileList.length,
+              itemBuilder: (BuildContext context, int index){
+                AudioData item = fileList[index];
+                return Dismissible(
+                  key: Key(index.toString()),
+                  background: Container(
+                    color: Colors.red,
+                    child: const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: EdgeInsets.only(left: 20.0),
+                        child: Icon(Icons.delete, color: Colors.white),
                       ),
                     ),
-                    direction: DismissDirection.horizontal,
-                    onDismissed: (direction){
-                      fileList.removeAt(index);
-                      _dbHelper.delData(item.fileName);
-                      setState(() {
-                        fileList = fileList;
-                        isEmpty = fileList.isEmpty;
-                      });
+                  ),
+                  direction: DismissDirection.horizontal,
+                  onDismissed: (direction){
+                    // fileList.removeAt(index);
+                    // _dbHelper.delData(item.fileName);
+                    // setState(() {
+                    //   fileList = fileList;
+                    //   isEmpty = fileList.isEmpty;
+                    // });
+                  },
+                  child: ListTile(
+                    title: Text(item.fileName),
+                    onTap: ()=>{
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context)=> Player(file: item))
+                      )
                     },
-                    child: ListTile(
-                      title: Text(item.fileName),
-                    ),
-                  );
-                },
-              )
+                  ),
+                );
+              },
+            ),
+          ),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () {
+              _openFileExplorer(context);
+            },
+            child: const Icon(Icons.add),
+          ),
         );
     }
   }
